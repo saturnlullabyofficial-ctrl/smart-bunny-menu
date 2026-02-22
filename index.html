@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Bunny POS</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body { font-family: 'Kanit', sans-serif; padding: 15px; background-color: #fdf2f8; }
+        .header { text-align: center; color: #db2777; margin-bottom: 20px; }
+        .menu-container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .item-card { 
+            background: white; border-radius: 12px; padding: 15px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border: 1px solid #fbcfe8;
+        }
+        .item-name { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 5px; }
+        .item-price { color: #db2777; font-size: 16px; font-weight: bold; }
+        .loading { text-align: center; color: #999; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🐰 Smart Bunny</h1>
+        <p>เลือกเมนูเพื่อบันทึกขาย</p>
+    </div>
+
+    <div id="loading" class="loading">กำลังโหลดเมนูจาก Google Sheets...</div>
+    <div id="menuList" class="menu-container"></div>
+
+    <script>
+        // เปลี่ยนเป็น URL Web App ของคุณที่ได้จากการ Deploy Apps Script
+        const API_URL = "ใส่_WEB_APP_URL_ที่นี่"; 
+
+        async function loadMenu() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                const menuList = document.getElementById('menuList');
+                document.getElementById('loading').style.display = 'none';
+
+                data.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'item-card';
+                    // ใช้ชื่อเมนูจากคอลัมน์ D ที่คุณรวม ไทย (English) ไว้แล้ว
+                    card.onclick = () => confirmOrder(item.name, item.price);
+                    card.innerHTML = `
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-price">${item.price}.-</div>
+                    `;
+                    menuList.appendChild(card);
+                });
+            } catch (err) {
+                console.error("Fetch error:", err);
+            }
+        }
+
+        async function confirmOrder(name, price) {
+            if(confirm(`ยืนยันบันทึกขาย: ${name} ราคา ${price} บาท?`)) {
+                sendToSheet(name, price);
+            }
+        }
+
+        async function sendToSheet(name, price) {
+            // ส่งข้อมูลกลับไปบันทึกที่ Google Sheets ผ่าน POST
+            await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ menuName: name, price: price })
+            });
+            liff.closeWindow();
+        }
+
+        async function initLiff() {
+            await liff.init({ liffId: "ใส่_LIFF_ID_ของคุณที่นี่" });
+            if (!liff.isLoggedIn()) { liff.login(); }
+            loadMenu();
+        }
+
+        initLiff();
+    </script>
+</body>
+</html>
